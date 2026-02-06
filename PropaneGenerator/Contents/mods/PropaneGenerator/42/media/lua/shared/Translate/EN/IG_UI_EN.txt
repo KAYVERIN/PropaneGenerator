@@ -1,3 +1,7 @@
 IGUI_EN = {
+  IGUI_PropaneGen_NeedPropane = "I need a propane tank to refuel this generator."
+	IGUI_PropaneGen_EmptyTank = "This propane tank is empty."
+	IGUI_PropaneGen_AlreadyFull = "The generator is already full."
+	IGUI_PropaneGen_Refueling = "Refueling generator with propane..."
 
 }
