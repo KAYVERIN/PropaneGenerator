@@ -16,5 +16,7 @@ item PropaneGenerator
     SoundVolume = 1,	
     CanStoreGas = true,
     GasCapacity = 20,
+	fuelType = Propane,
 }
         
+
