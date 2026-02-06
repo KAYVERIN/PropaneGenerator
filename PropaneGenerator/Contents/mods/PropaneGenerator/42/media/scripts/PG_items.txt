@@ -1,0 +1,23 @@
+item PropaneGenerator
+{
+    DisplayCategory = Electrical,
+    Type = Normal,
+    DisplayName = Propane Generator,
+    Icon = generator_0,
+    Weight = 30,
+    ConditionMax = 100,
+    Condition = 100,
+    CanStoreGas = true,
+    GasCapacity = 20,
+    WorldStaticModel = Generator,
+    Tags = Generator;Placeable,
+    Tooltip = PropaneGeneratorTooltip,
+    ReplaceOnUseOn = Generator,
+    IsWaterSource = false,
+    CanBePlaced = true,
+    CanBePlacedOn = true,
+    PlacementSprite = generator_0,
+    PickUpSound = PickUpGenerator,
+    DropSound = DropGenerator,
+    PutInSound = PutItemInBag,
+}
