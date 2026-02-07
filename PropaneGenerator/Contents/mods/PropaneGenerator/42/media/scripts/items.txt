@@ -12,7 +12,7 @@ module Base
 		WorldObjectSprite = appliances_misc_01_4,
 		RequiresEquippedBothHands = true,
 		Tooltip = PropaneGeneratorTooltip,
-		Tags = base:heavyitem;base:generator;base:hasmetal;base:ignorezombiedensity;base:showcondition;PropanePowered; base:heavyitem; base:showcondition,
+		Tags = base:heavyitem;base:generator;base:hasmetal;base:ignorezombiedensity;base:showcondition;PropanePowered,
 		ConditionLowerChanceOneIn = 25,
 		SoundRadius = 25,
 		SoundVolume = 1,
@@ -22,3 +22,4 @@ module Base
 	}
 
 }
+
