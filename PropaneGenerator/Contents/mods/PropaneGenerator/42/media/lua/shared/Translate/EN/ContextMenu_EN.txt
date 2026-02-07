@@ -1,5 +1,0 @@
-ContextMenu_EN = {
-  ContextMenu_RefuelPropane = "Refuel with Propane"
-	ContextMenu_TakeGenerator = "Take Generator"
-	ContextMenu_GeneratorInfo = "Generator Info"
-}
