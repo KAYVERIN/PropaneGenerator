@@ -1,0 +1,23 @@
+module Base
+{
+
+	item PropaneGenerator
+	{
+		DisplayCategory = Electronics,
+		DisplayName = Propane Generator,
+		Icon = Generator4,
+		Weight = 30,
+		ConditionMax = 100,
+		ItemType = base:normal,
+		WorldObjectSprite = appliances_misc_01_4,
+		RequiresEquippedBothHands = true,
+		Tooltip = PropaneGeneratorTooltip,
+		Tags = base:heavyitem;base:generator;base:hasmetal;base:ignorezombiedensity;base:showcondition,;base:PropanePowered; base:heavyitem; base:showcondition,
+		ConditionLowerChanceOneIn = 25,
+		SoundRadius = 25,
+		SoundVolume = 1,
+		ModData {
+			fuelType = Propane,
+		},
+	}
+}

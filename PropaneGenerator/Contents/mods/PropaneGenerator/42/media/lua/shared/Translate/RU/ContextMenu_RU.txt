@@ -1,0 +1,4 @@
+ContextMenu_RU = {
+	ContextMenu_RefuelPropane = "Заправить пропаном"
+	ContextMenu_NoPropaneTank = "У меня нет баллона с пропаном"
+}

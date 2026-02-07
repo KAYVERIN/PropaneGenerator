@@ -1,0 +1,6 @@
+name=Propane Generator
+id=PropaneGenerator
+description=Adds a propane-fueled generator
+versionMin=42.13.1
+modversion=1.0
+icon=104359.png

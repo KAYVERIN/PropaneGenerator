@@ -1,0 +1,4 @@
+UI_EN = {	
+	
+	PropaneGenerator_UI_Title = "Propane Generator"
+}

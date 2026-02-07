@@ -1,0 +1,39 @@
+module Base
+{
+craftRecipe CraftPropaneGenerator
+{
+    time = 600,  
+    tags = AnySurfaceCraft,
+    timedAction = DismantleElectrical,
+    category = Electrical,
+    AutoLearnAny = Electricity:9,
+    xpAward = Electricity:250,  
+    SkillRequired = Electricity:9;MetalWelding:2;Mechanics:8,
+
+    inputs
+    {
+        
+        item 10 [Base.Scotchtape],
+        item 4 [Base.ElectricWire] flags[NoBrokenItems],
+        item 10 [Base.ElectronicsScrap] flags[NoBrokenItems],
+        item 8 [Base.MetalPipe] flags[NoBrokenItems],
+        item 10 [Base.BlowTorch],
+        item 1 tags[base:weldingmask] mode:keep,
+        item 15 [Base.NutsBolts],
+        item 1 tags[base:screwdriver] mode:keep flags[MayDegradeVeryLight;Prop1],
+        item 20 [Base.EngineParts],
+        item 1 tags[base:wrench] mode:keep flags[MayDegradeLight],
+        item 2 [Base.SheetMetal],
+
+        
+        item 1 [Base.PropaneTank] mode:destroy, 
+       
+    }
+
+    outputs
+    {
+        item 1 Base.PropaneGenerator, 
+    }
+}
+			
+}
