@@ -198,7 +198,7 @@ function ISGeneratorInfoWindow:onRefuelPropane()
     
     for i=0, items:size()-1 do
         local item = items:get(i)
-        if item and item:getType() and string.contains(item:getType():lower(), "propanetank") then
+        if item:getType() and (item:getType() == "PropaneTank" or item:getType() == "PropaneTankFull") then
             if item:getUsedDelta() > 0 then
                 propaneTank = item
                 break
@@ -356,4 +356,5 @@ local function loadCustomTextures()
 end
 
 -- Загружаем текстуры при запуске игры
+
 Events.OnGameBoot.Add(loadCustomTextures)
