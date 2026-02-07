@@ -1,360 +1,365 @@
--- PropaneGeneratorMod.lua
--- Полный мод для пропанового генератора в Project Zomboid Build 42.13.2
--- Объединяет регистрацию топлива, действие и интеграцию в UI.
+-- PropaneGeneratorOld.lua
+-- Mod dlya odinochnoy igry Project Zomboid 42.13.2
+-- Zapravka starogo generatora (Base.Generator_Old) propanovymi balonami (Base.PropaneTank)
 
--------------------------------------------------------------------
--- 1. РЕГИСТРАЦИЯ ТИПА ТОПЛИВА "ПРОПАН"
--------------------------------------------------------------------
-if not FuelTypes then FuelTypes = {} end
-FuelTypes.Propane = {
-    name = "Propane",
-    itemName = "Base.PropaneTank",
-    -- Сообщаем игре, что пустой предмет - это Base.EmptyPropaneTank
-    emptyContainer = "Base.EmptyPropaneTank",
-    -- Коэффициент может регулировать скорость заправки
-    ratio = 1.0
+-- ============================================================================
+-- БЛОК 1: НАСТРОЙКИ МОДА
+-- ============================================================================
+
+local MOD_SETTINGS = {
+    -- Настройка заправки
+    PROPANE_PER_TANK = 100,          -- Один баллон = 100% заправки
+    REFUEL_TIME = 150,               -- 150 тиков как в ISAddFuelAction
+    
+    -- Настройки звуков
+    SOUND_START = "TakeGasFromContainer",   
+    SOUND_FINISH = "PutGasIntoContainer",
+    
+    -- Тексты
+    TEXT_REFUEL_OPTION = "Zapravit' Propanom",
+    TEXT_FUEL_DISPLAY = "Propana: ",
+    TEXT_ACTION = "Zapravka propanom...",
+    TEXT_GENERATOR_MENU = "Generator",
+    
+    -- Отладка
+    DEBUG_MODE = true,
+    PRINT_PREFIX = "[PropaneGenerator]"
 }
-print("[PropaneGeneratorMod] Тип топлива 'Propane' зарегистрирован.")
 
--------------------------------------------------------------------
--- 2. КЛАСС ДЕЙСТВИЯ ДОБАВЛЕНИЯ ПРОПАНА
---    Наследуется от встроенного ISAddFuelAction
--------------------------------------------------------------------
-local AddPropaneAction = ISBaseTimedAction:derive("AddPropaneAction")
+print(MOD_SETTINGS.PRINT_PREFIX .. " Mod nachinaet zagruzku...")
 
-function AddPropaneAction:new(character, generator, propaneTank, time)
+-- ============================================================================
+-- БЛОК 2: ГЛОБАЛЬНЫЙ ОБЪЕКТ МОДА
+-- ============================================================================
+
+local PropaneGeneratorMod = {}
+
+--[[
+    Инициализация мода
+]]
+function PropaneGeneratorMod.init()
+    print(MOD_SETTINGS.PRINT_PREFIX .. " Inicializaciya moda...")
+    
+    -- Регистрация обработчиков
+    Events.OnFillWorldObjectContextMenu.Add(PropaneGeneratorMod.onFillContextMenu)
+    
+    -- Простое уведомление о старте
+    Events.OnGameStart.Add(function()
+        print(MOD_SETTINGS.PRINT_PREFIX .. " Mod gotov k rabote")
+    end)
+    
+    print(MOD_SETTINGS.PRINT_PREFIX .. " Inicializaciya zavershena")
+end
+
+-- ============================================================================
+-- БЛОК 3: ПОИСК ГЕНЕРАТОРА
+-- ============================================================================
+
+--[[
+    Поиск старого генератора среди объектов
+]]
+function PropaneGeneratorMod.findOldGenerator(worldobjects)
+    if not worldobjects then 
+        return nil 
+    end
+    
+    for _, obj in ipairs(worldobjects) do
+        -- Проверяем что объект существует
+        if obj == nil then
+            break
+        end
+        
+        -- Получаем тип объекта
+        local objType = ""
+        if obj.getObjectName then
+            objType = tostring(obj:getObjectName())
+        else
+            break
+        end
+        
+        if MOD_SETTINGS.DEBUG_MODE then
+            print(MOD_SETTINGS.PRINT_PREFIX .. " Proveryaem ob'ekt: " .. objType)
+        end
+        
+        -- Простая проверка по названию
+        if string.find(objType:lower(), "generator") then
+            if MOD_SETTINGS.DEBUG_MODE then
+                print(MOD_SETTINGS.PRINT_PREFIX .. " Najden generator po imeni")
+            end
+            return obj
+        end
+    end
+    
+    if MOD_SETTINGS.DEBUG_MODE then
+        print(MOD_SETTINGS.PRINT_PREFIX .. " Generator ne najden")
+    end
+    return nil
+end
+
+-- ============================================================================
+-- БЛОК 4: ИНИЦИАЛИЗАЦИЯ ДАННЫХ
+-- ============================================================================
+
+--[[
+    Инициализация данных пропана для генератора
+]]
+function PropaneGeneratorMod.initPropaneData(generator)
+    if not generator then 
+        return nil 
+    end
+    
+    local modData = generator:getModData()
+    
+    if not modData.propaneInitialized then
+        print(MOD_SETTINGS.PRINT_PREFIX .. " Pervaya inicializaciya generatora")
+        
+        modData.propaneData = {
+            fuel = 0,
+            maxFuel = 100,
+            usesPropane = true
+        }
+        
+        modData.propaneInitialized = true
+        
+        -- Получаем текущее топливо
+        local currentFuel = generator:getFuel()
+        if currentFuel and currentFuel > 0 then
+            modData.propaneData.fuel = currentFuel
+            print(MOD_SETTINGS.PRINT_PREFIX .. " Tekushee toplivo: " .. currentFuel)
+        end
+    end
+    
+    return modData.propaneData
+end
+
+-- ============================================================================
+-- БЛОК 5: ПРОВЕРКА ИНВЕНТАРЯ
+-- ============================================================================
+
+--[[
+    Проверка наличия пропанового баллона
+]]
+function PropaneGeneratorMod.checkPropaneTank(player)
+    if not player then 
+        return false, nil 
+    end
+    
+    local playerInv = player:getInventory()
+    if not playerInv then 
+        return false, nil 
+    end
+    
+    -- Пробуем разные варианты названия
+    local propaneTanks = playerInv:getItemsFromType("PropaneTank")
+    if not propaneTanks or propaneTanks:size() == 0 then
+        propaneTanks = playerInv:getItemsFromType("Base.PropaneTank")
+    end
+    
+    if propaneTanks and propaneTanks:size() > 0 then
+        local tank = propaneTanks:get(0)
+        if MOD_SETTINGS.DEBUG_MODE then
+            print(MOD_SETTINGS.PRINT_PREFIX .. " Najden balon: " .. tostring(tank))
+        end
+        return true, tank
+    end
+    
+    return false, nil
+end
+
+-- ============================================================================
+-- БЛОК 6: КОНТЕКСТНОЕ МЕНЮ
+-- ============================================================================
+
+--[[
+    Обработчик контекстного меню
+]]
+function PropaneGeneratorMod.onFillContextMenu(playerNum, context, worldobjects)
+    local player = getSpecificPlayer(playerNum)
+    if not player then 
+        return 
+    end
+    
+    -- Ищем генератор
+    local generator = PropaneGeneratorMod.findOldGenerator(worldobjects)
+    if not generator then 
+        return 
+    end
+    
+    -- Инициализируем данные
+    local propaneData = PropaneGeneratorMod.initPropaneData(generator)
+    
+    -- Проверяем баллон
+    local hasPropane, propaneTank = PropaneGeneratorMod.checkPropaneTank(player)
+    if not hasPropane then
+        if MOD_SETTINGS.DEBUG_MODE then
+            print(MOD_SETTINGS.PRINT_PREFIX .. " Net balona v inventare")
+        end
+        return
+    end
+    
+    -- Проверяем уровень топлива
+    if propaneData.fuel >= propaneData.maxFuel then
+        print(MOD_SETTINGS.PRINT_PREFIX .. " Generator uzhe zapravlen (" .. propaneData.fuel .. "%)")
+        return
+    end
+    
+    -- Создаем меню
+    local generatorOption = context:addOption(MOD_SETTINGS.TEXT_GENERATOR_MENU, worldobjects, nil)
+    local subMenu = ISContextMenu:getNew(context)
+    context:addSubMenu(generatorOption, subMenu)
+    
+    -- Добавляем опцию заправки
+    subMenu:addOption(
+        MOD_SETTINGS.TEXT_REFUEL_OPTION,
+        generator,
+        PropaneGeneratorMod.startRefuelAction,
+        player,
+        propaneTank
+    )
+    
+    -- Добавляем информацию о топливе
+    local fuelPercent = math.floor((propaneData.fuel / propaneData.maxFuel) * 100)
+    subMenu:addOption(MOD_SETTINGS.TEXT_FUEL_DISPLAY .. fuelPercent .. "%", worldobjects, nil)
+    
+    print(MOD_SETTINGS.PRINT_PREFIX .. " Menu sozdano. Toplivo: " .. fuelPercent .. "%")
+end
+
+-- ============================================================================
+-- БЛОК 7: ТАЙМЕРНОЕ ДЕЙСТВИЕ
+-- ============================================================================
+
+-- Создаем класс действия
+PropaneGeneratorMod.ISAddPropaneToGenerator = ISBaseTimedAction:derive("ISAddPropaneToGenerator")
+
+--[[
+    Конструктор действия
+]]
+function PropaneGeneratorMod.ISAddPropaneToGenerator:new(character, generator, propaneTank)
     local o = ISBaseTimedAction.new(self, character)
+    o.character = character
     o.generator = generator
     o.propaneTank = propaneTank
-    o.maxTime = time or 50 -- Время по умолчанию
-
     o.stopOnWalk = true
     o.stopOnRun = true
-    o.forceProgressBar = true -- Всегда показывать полосу прогресса
-
-    -- Кэшируем тип генератора для быстрой проверки
-    o.isPropaneGenerator = generator:getModData().fuelType == "Propane"
+    o.maxTime = MOD_SETTINGS.REFUEL_TIME
     
+    if character:isTimedActionInstant() then
+        o.maxTime = 1
+    end
+    
+    o.useProgressBar = true
     return o
 end
 
-function AddPropaneAction:isValid()
-    -- Базовые проверки родительского класса
-    if not self.character or not self.generator or not self.propaneTank then
-        return false
+--[[
+    Проверка валидности
+]]
+function PropaneGeneratorMod.ISAddPropaneToGenerator:isValid()
+    if not self.character or not self.generator then 
+        return false 
     end
     
-    -- Проверка 1: Генератор должен быть пропановым
-    if not self.isPropaneGenerator then
-        return false
+    if self.generator:getSquare() == nil then 
+        return false 
     end
     
-    -- Проверка 2: Расстояние до генератора
-    if self.character:DistToSquared(self.generator:getX() + 0.5, self.generator:getY() + 0.5) > 4 then
-        return false
+    local playerInv = self.character:getInventory()
+    if not playerInv:contains(self.propaneTank) then 
+        return false 
     end
     
-    -- Проверка 3: В баллоне должно быть топливо
-    if self.propaneTank:getUsedDelta() <= 0 then
-        return false
-    end
-    
-    -- Проверка 4: Генератор не должен быть полным
-    if self.generator:getFuel() >= 1.0 then
-        return false
-    end
-    
-    -- Проверка 5: Баллон должен быть именно пропановым
-    if not self.propaneTank:getType() or not string.contains(self.propaneTank:getType():lower(), "propanetank") then
-        return false
+    local modData = self.generator:getModData()
+    if modData.propaneData and modData.propaneData.fuel >= 100 then 
+        return false 
     end
     
     return true
 end
 
-function AddPropaneAction:update()
-    -- Персонаж всегда смотрит на генератор во время действия
-    self.character:faceThisObject(self.generator)
-    -- Можно добавить дополнительные анимации
-    if self.character:getSpriteDef() and not self.character:getSpriteDef():getType() == "Loot" then
-        self:setActionAnim("Loot")
+--[[
+    Обновление действия
+]]
+function PropaneGeneratorMod.ISAddPropaneToGenerator:update()
+    if self.character and self.generator then
+        self.character:faceThisObject(self.generator)
+    end
+   -- self:setActionText(MOD_SETTINGS.TEXT_ACTION)
+end
+
+--[[
+    Начало действия
+]]
+function PropaneGeneratorMod.ISAddPropaneToGenerator:start()
+    --self:setActionText(MOD_SETTINGS.TEXT_ACTION)
+    self:setAnimVariable("LootPosition", "Low")
+    self.character:SetVariable("LootPosition", "Low")
+    
+    if self.character.getEmitter then
+        self.character:getEmitter():playSound(MOD_SETTINGS.SOUND_START)
     end
 end
 
-function AddPropaneAction:start()
-    -- Стандартная анимация "добычи" для заправки
-    self:setActionAnim("Loot")
-    self:setOverrideHandModels(nil, nil)
-    
-    -- Звук начала заправки (можно заменить на кастомный)
-    if self.character:getEmitter():playSound("GeneratorRefuel") then
-        self.soundStarted = true
+--[[
+    Выполнение действия
+]]
+function PropaneGeneratorMod.ISAddPropaneToGenerator:perform()
+    -- Удаляем баллон
+    if self.character and self.character.getInventory then
+        self.character:getInventory():Remove(self.propaneTank)
     end
     
-    -- Инициализация переменных для плавного прогресса
-    self.initialFuel = self.generator:getFuel()
-    self.initialPropane = self.propaneTank:getUsedDelta()
-end
-
-function AddPropaneAction:perform()
-    -- Убедимся, что действие все еще валидно
-    if not self:isValid() then
-        ISBaseTimedAction.perform(self)
-        return
+    -- Обновляем данные
+    local modData = self.generator:getModData()
+    if not modData.propaneData then
+        modData.propaneData = {fuel = 0, maxFuel = 100}
     end
     
-    -- Вычисляем количество топлива для перелива
-    local fuelSpace = 1.0 - self.generator:getFuel()
-    local fuelAvailable = self.propaneTank:getUsedDelta()
-    local fuelAmount = math.min(fuelSpace, fuelAvailable)
+    modData.propaneData.fuel = MOD_SETTINGS.PROPANE_PER_TANK
     
-    -- Применяем изменения
-    self.generator:setFuel(self.generator:getFuel() + fuelAmount)
-    self.propaneTank:setUsedDelta(fuelAvailable - fuelAmount)
-    
-    -- Если баллон опустел, заменить его на пустой
-    -- В Build 42 это часто обрабатывается автоматически, но делаем для надежности
-    if self.propaneTank:getUsedDelta() <= 0 then
-        local emptyTank = InventoryItemFactory.CreateItem("Base.EmptyPropaneTank")
-        if emptyTank and self.character:getInventory():contains(self.propaneTank) then
-            self.character:getInventory():Remove(self.propaneTank)
-            self.character:getInventory():AddItem(emptyTank)
-        end
+    -- Устанавливаем топливо
+    if self.generator.setFuel then
+        self.generator:setFuel(modData.propaneData.fuel)
     end
     
-    -- Обновляем интерфейс, если окно информации открыто
-    if self.generator.window then
-        self.generator.window:fillGeneratorInfo()
+    -- Воспроизводим звук
+    if self.character and self.character.getEmitter then
+        self.character:getEmitter():playSound(MOD_SETTINGS.SOUND_FINISH)
     end
     
-    -- Звук завершения
-    self.character:getEmitter():playSound("GeneratorRefuelEnd")
+    print(MOD_SETTINGS.PRINT_PREFIX .. " Generator zapravlen! (" .. modData.propaneData.fuel .. "%)")
     
-    -- Завершаем действие
     ISBaseTimedAction.perform(self)
 end
 
-function AddPropaneAction:stop()
-    -- Останавливаем звук, если он играл
-    if self.soundStarted then
-        self.character:getEmitter():stopSoundByName("GeneratorRefuel")
-    end
+--[[
+    Прерывание действия
+]]
+function PropaneGeneratorMod.ISAddPropaneToGenerator:stop()
     ISBaseTimedAction.stop(self)
 end
 
--------------------------------------------------------------------
--- 3. ИНТЕГРАЦИЯ В ОКНО ИНФОРМАЦИИ О ГЕНЕРАТОРЕ
---    Анализ ISGeneratorInfoWindow.lua показал, что кнопки добавляются
---    в метод createButtons. Мы его переопределим.
--------------------------------------------------------------------
-local original_ISGeneratorInfoWindow_createButtons = ISGeneratorInfoWindow.createButtons
+-- ============================================================================
+-- БЛОК 8: ЗАПУСК ДЕЙСТВИЯ
+-- ============================================================================
 
-function ISGeneratorInfoWindow:createButtons(y, buttonHeight)
-    -- Сначала вызываем оригинальный метод для стандартных кнопок
-    y = original_ISGeneratorInfoWindow_createButtons(self, y, buttonHeight)
-    
-    -- Добавляем кнопку заправки пропаном ТОЛЬКО для пропановых генераторов
-    if self.generator:getModData().fuelType == "Propane" then
-        local buttonWidth = 100
-        local buttonPad = 10
-        
-        -- Кнопка "Заправить пропаном"
-        self.refuelPropaneBtn = ISButton:new(
-            self.width - buttonWidth - buttonPad, 
-            y, 
-            buttonWidth, 
-            buttonHeight, 
-            getText("ContextMenu_RefuelPropane"), 
-            self, 
-            ISGeneratorInfoWindow.onRefuelPropane
-        )
-        self.refuelPropaneBtn.internal = "REFUEL_PROPANE"
-        self.refuelPropaneBtn:initialise()
-        self.refuelPropaneBtn:instantiate()
-        self.refuelPropaneBtn.borderColor = {r=0.4, g=0.4, b=0.4, a=1.0}
-        self.refuelPropaneBtn:setFont(UIFont.Small)
-        self:addChild(self.refuelPropaneBtn)
-        
-        y = y + buttonHeight + 5
-        
-        -- Обновляем высоту окна, если нужно
-        if y > self.height then
-            self:setHeight(y + 20)
-        end
-    end
-    
-    return y
+--[[
+    Функция запуска действия из меню
+]]
+function PropaneGeneratorMod.startRefuelAction(generator, player, propaneTank)
+    ISTimedActionQueue.add(
+        PropaneGeneratorMod.ISAddPropaneToGenerator:new(player, generator, propaneTank)
+    )
+    print(MOD_SETTINGS.PRINT_PREFIX .. " Deistvie zapravki dobavleno v ochered'")
 end
 
--- Обработчик нажатия кнопки "Заправить пропаном"
-function ISGeneratorInfoWindow:onRefuelPropane()
-    local player = getSpecificPlayer(self.playerNum)
-    if not player then return end
-    
-    -- Ищем баллон с пропаном в инвентаре
-    local propaneTank = nil
-    local inventory = player:getInventory()
-    local items = inventory:getItems()
-    
-    for i=0, items:size()-1 do
-        local item = items:get(i)
-        if item:getType() and (item:getType() == "PropaneTank" or item:getType() == "PropaneTankFull") then
-            if item:getUsedDelta() > 0 then
-                propaneTank = item
-                break
-            end
-        end
-    end
-    
-    if not propaneTank then
-        -- Если нет баллона, показываем сообщение
-        player:Say(getText("ContextMenu_NoPropaneTank"))
-        return
-    end
-    
-    -- Создаем и добавляем действие в очередь
-    local action = AddPropaneAction:new(player, self.generator, propaneTank, 50)
-    ISTimedActionQueue.add(action)
-    
-    -- Закрываем окно после начала действия
-    self:close()
-end
+-- ============================================================================
+-- БЛОК 9: ЗАГРУЗКА МОДА
+-- ============================================================================
 
--------------------------------------------------------------------
--- 4. ОБРАБОТКА КОНТЕКСТНОГО МЕНЮ В МИРЕ
---    Добавляем опцию для пропановых генераторов в мире
--------------------------------------------------------------------
-local original_ISWorldObjectContextMenu_createMenu = ISWorldObjectContextMenu.createMenu
+-- Автоматический запуск
+print(MOD_SETTINGS.PRINT_PREFIX .. " =========================================")
+PropaneGeneratorMod.init()
+print(MOD_SETTINGS.PRINT_PREFIX .. " MOD USPEKHNO ZAGRUZHEN!")
+print(MOD_SETTINGS.PRINT_PREFIX .. " =========================================")
 
-function ISWorldObjectContextMenu.createMenu(playerNum, worldObjects, x, y, test)
-    local context = original_ISWorldObjectContextMenu_createMenu(playerNum, worldObjects, x, y, test)
-    
-    local player = getSpecificPlayer(playerNum)
-    if not player or not context then return context end
-    
-    -- Проверяем, есть ли среди объектов пропановый генератор
-    for i=1, #worldObjects do
-        local object = worldObjects[i]
-        if instanceof(object, "IsoGenerator") then
-            if object:getModData().fuelType == "Propane" then
-                -- Добавляем опцию в меню
-                local option = context:addOption(
-                    getText("ContextMenu_GeneratorInfo"), 
-                    worldObjects, 
-                    ISWorldObjectContextMenu.onGeneratorInfo, 
-                    playerNum, object
-                )
-                -- Можно добавить иконку
-                option.iconTexture = getTexture("media/textures/menu_icons/Generator.png")
-                
-                -- Если у игрока есть баллон с пропаном, добавляем опцию заправки
-                local hasPropane = false
-                local inventory = player:getInventory()
-                local items = inventory:getItems()
-                
-                for j=0, items:size()-1 do
-                    local item = items:get(j)
-                    if item and item:getType() and string.contains(item:getType():lower(), "propanetank") then
-                        if item:getUsedDelta() > 0 then
-                            hasPropane = true
-                            break
-                        end
-                    end
-                end
-                
-                if hasPropane then
-                    local refuelOption = context:addOption(
-                        getText("ContextMenu_RefuelPropane"), 
-                        worldObjects, 
-                        function(worldObjects, playerNum, generator)
-                            local player = getSpecificPlayer(playerNum)
-                            local propaneTank = nil
-                            local inventory = player:getInventory()
-                            local items = inventory:getItems()
-                            
-                            for k=0, items:size()-1 do
-                                local item = items:get(k)
-                                if item and item:getType() and string.contains(item:getType():lower(), "propanetank") then
-                                    if item:getUsedDelta() > 0 then
-                                        propaneTank = item
-                                        break
-                                    end
-                                end
-                            end
-                            
-                            if propaneTank then
-                                local action = AddPropaneAction:new(player, generator, propaneTank, 50)
-                                ISTimedActionQueue.add(action)
-                            end
-                        end, 
-                        playerNum, object
-                    )
-                    refuelOption.iconTexture = getTexture("media/textures/menu_icons/Fuel.png")
-                end
-                
-                break -- Только первый найденный генератор
-            end
-        end
-    end
-    
-    return context
-end
-
--------------------------------------------------------------------
--- 5. ИНИЦИАЛИЗАЦИЯ МОДА
--------------------------------------------------------------------
-local function init()
-    print("[PropaneGeneratorMod] Мод инициализирован для Build 42.13.2")
-    
-    -- Проверяем, что предмет PropaneTank существует
-    if not getScriptManager():getItem("Base.PropaneTank") then
-        print("[PropaneGeneratorMod] ВНИМАНИЕ: Предмет Base.PropaneTank не найден!")
-    else
-        print("[PropaneGeneratorMod] Предмет Base.PropaneTank найден")
-    end
-end
-
--- Инициализируем мод после загрузки игры
-Events.OnGameStart.Add(init)
-
--------------------------------------------------------------------
--- 6. ДОПОЛНИТЕЛЬНЫЕ УТИЛИТЫ
--------------------------------------------------------------------
--- Функция для проверки, является ли предмет пропановым баллоном
-function isPropaneTank(item)
-    if not item then return false end
-    if not item.getType then return false end
-    local itemType = item:getType()
-    return itemType and string.contains(itemType:lower(), "propanetank")
-end
-
--- Функция для получения количества пропана в инвентаре (в условных единицах)
-function getPropaneAmount(player)
-    if not player then return 0 end
-    local total = 0
-    local inventory = player:getInventory()
-    local items = inventory:getItems()
-    
-    for i=0, items:size()-1 do
-        local item = items:get(i)
-        if isPropaneTank(item) then
-            total = total + item:getUsedDelta()
-        end
-    end
-    
-    return total
-end
-
--- Загрузка пользовательских текстур для мода
-local function loadCustomTextures()
-    -- Загружаем текстуру для отображения генератора на земле
-    if not getTexture("media/textures/GeneratorPropane.png") then
-        print("[PropaneGeneratorMod] ВНИМАНИЕ: Текстура GeneratorPropane.png не найдена!")
-    else
-        print("[PropaneGeneratorMod] Текстура GeneratorPropane.png успешно загружена.")
-    end
-end
-
--- Загружаем текстуры при запуске игры
-
-Events.OnGameBoot.Add(loadCustomTextures)
+return PropaneGeneratorMod
