@@ -1,0 +1,519 @@
+require "ISUI/ISCollapsableWindow"
+
+ISExtendedPlacementUI = ISCollapsableWindow:derive("ISExtendedPlacementUI")
+ISExtendedPlacementUI.windows = {}
+
+local FONT_HGT_SMALL = getTextManager():getFontHeight(UIFont.Small)
+
+function ISExtendedPlacementUI:initialise()
+    ISCollapsableWindow.initialise(self);
+    local btnwidth = 20;
+    local btnheight = FONT_HGT_SMALL + 2;
+    local txtboxwidth = 50;
+    local sliderwidth = 150;
+
+    self.labelmov = ISLabel:new(5, 20, 25, getText("IGUI_ExtendedPlacement_ModeMovement"), 1, 1, 1, 1, self.font, true)
+    self.labelmov:initialise()
+    self:addChild(self.labelmov)
+
+    self.labelxmov = ISLabel:new(5, 20, 25, getText("IGUI_ExtendedPlacement_XAxis"), 1, 1, 1, 1, self.fontsmall, true)
+    self.labelxmov:initialise()
+    self:addChild(self.labelxmov)
+
+    self.labelymov = ISLabel:new(self.labelxmov.x, self.labelxmov.y + self.labelxmov:getHeight() + 5, 25, getText("IGUI_ExtendedPlacement_YAxis"), 1, 1, 1, 1, self.fontsmall, true)
+    self.labelymov:initialise()
+    self:addChild(self.labelymov)
+
+    self.labelzmov = ISLabel:new(self.labelxmov.x, self.labelymov.y + self.labelymov:getHeight() + 5, 25, getText("IGUI_ExtendedPlacement_ZAxis"), 1, 1, 1, 1, self.fontsmall, true)
+    self.labelzmov:initialise()
+    self:addChild(self.labelzmov)
+
+    self.txtboxxmov = ISTextEntryBox:new(self.worlditem:getOffX() .. "", 10, self.labelxmov.y + 3, txtboxwidth, btnheight);
+    self.txtboxxmov.internal = "xmov";
+    self:setupAxisTextBox(self.txtboxxmov)
+
+    self.txtboxymov = ISTextEntryBox:new(self.worlditem:getOffY() .. "", 10, self.labelymov.y + 3, txtboxwidth, btnheight);
+    self.txtboxymov.internal = "ymov";
+    self:setupAxisTextBox(self.txtboxymov)
+
+    self.txtboxzmov = ISTextEntryBox:new(self.worlditem:getOffZ() .. "", 10, self.labelzmov.y + 3, txtboxwidth, btnheight);
+    self.txtboxzmov.internal = "zmov";
+    self:setupAxisTextBox(self.txtboxzmov)
+
+    self.ignoreSliderValueChange = true
+
+    self.sliderxmov = ISSliderPanel:new(self.txtboxxmov.x + self.txtboxxmov:getWidth(), self.txtboxxmov.y +3, sliderwidth, btnheight, self, self.onAxisSliderChange)
+    self.sliderxmov:setValues(0.0, 1, 0.01, 1.0)
+    self.sliderxmov:setCurrentValue(1.0, true)
+    self.sliderxmov.internal = "xmov";
+    self.sliderxmov.txtbox = self.txtboxxmov;
+    self:addChild(self.sliderxmov);
+
+    self.sliderymov = ISSliderPanel:new(self.txtboxymov.x + self.txtboxymov:getWidth(), self.txtboxymov.y +3, sliderwidth, btnheight, self, self.onAxisSliderChange)
+    self.sliderymov:setValues(0.0, 1, 0.01, 1.0)
+    self.sliderymov:setCurrentValue(1.0, true)
+    self.sliderymov.internal = "ymov";
+    self.sliderymov.txtbox = self.txtboxymov;
+    self:addChild(self.sliderymov);
+
+    self.sliderzmov = ISSliderPanel:new(self.txtboxzmov.x + self.txtboxzmov:getWidth(), self.txtboxzmov.y +3, sliderwidth, btnheight, self, self.onAxisSliderChange)
+    self.sliderzmov:setValues(0.0, 1, 0.01, 1.0)
+    self.sliderzmov:setCurrentValue(1.0, true)
+    self.sliderzmov.internal = "zmov";
+    self.sliderzmov.txtbox = self.txtboxzmov;
+    self:addChild(self.sliderzmov);
+
+    -- ROTATION
+
+    self.labelrot = ISLabel:new(5, self.sliderzmov.y + self.sliderzmov:getHeight() + 10, 25, getText("IGUI_ExtendedPlacement_ModeRotation"), 1, 1, 1, 1, self.font, true)
+    self.labelrot:initialise()
+    self:addChild(self.labelrot)
+
+    self.labelxrot = ISLabel:new(5, self.labelrot.y + self.labelrot:getHeight() + 5, 25, getText("IGUI_ExtendedPlacement_XAxis"), 1, 1, 1, 1, self.fontsmall, true)
+    self.labelxrot:initialise()
+    self:addChild(self.labelxrot)
+
+    self.labelyrot = ISLabel:new(self.labelxrot.x, self.labelxrot.y + self.labelxrot:getHeight() + 5, 25, getText("IGUI_ExtendedPlacement_YAxis"), 1, 1, 1, 1, self.fontsmall, true)
+    self.labelyrot:initialise()
+    self:addChild(self.labelyrot)
+
+    self.labelzrot = ISLabel:new(self.labelxrot.x, self.labelxrot.y + self.labelxrot:getHeight() + 5, 25, getText("IGUI_ExtendedPlacement_ZAxis"), 1, 1, 1, 1, self.fontsmall, true)
+    self.labelzrot:initialise()
+    self:addChild(self.labelzrot)
+
+    self.txtboxxrot = ISTextEntryBox:new(self.item:getWorldXRotation() .. "", 10, self.labelxrot.y + 3, txtboxwidth, btnheight);
+    self.txtboxxrot.internal = "xrot";
+    self:setupAxisTextBox(self.txtboxxrot)
+
+    self.txtboxyrot = ISTextEntryBox:new(self.item:getWorldYRotation() .. "", 10, self.labelyrot.y + 3, txtboxwidth, btnheight);
+    self.txtboxyrot.internal = "yrot";
+    self:setupAxisTextBox(self.txtboxyrot)
+
+    self.txtboxzrot = ISTextEntryBox:new(self.item:getWorldZRotation() .. "", 10, self.labelzrot.y + 3, txtboxwidth, btnheight);
+    self.txtboxzrot.internal = "zrot";
+    self:setupAxisTextBox(self.txtboxzrot)
+
+    self.sliderxrot = ISSliderPanel:new(self.txtboxxrot.x + self.txtboxxrot:getWidth(), self.txtboxxrot.y +3, sliderwidth, btnheight, self, self.onAxisSliderChange)
+    self.sliderxrot:setValues(0.0, 360.0, 1, 1.0)
+    self.sliderxrot:setCurrentValue(1.0, true)
+    self.sliderxrot.internal = "xrot";
+    self.sliderxrot.txtbox = self.txtboxxrot;
+    self:addChild(self.sliderxrot);
+
+    self.slideryrot = ISSliderPanel:new(self.txtboxyrot.x + self.txtboxyrot:getWidth(), self.txtboxyrot.y +3, sliderwidth, btnheight, self, self.onAxisSliderChange)
+    self.slideryrot:setValues(0.0, 360.0, 1, 1.0)
+    self.slideryrot:setCurrentValue(1.0, true)
+    self.slideryrot.internal = "yrot";
+    self.slideryrot.txtbox = self.txtboxyrot;
+    self:addChild(self.slideryrot);
+
+    self.sliderzrot = ISSliderPanel:new(self.txtboxzrot.x + self.txtboxzrot:getWidth(), self.txtboxzrot.y +3, sliderwidth, btnheight, self, self.onAxisSliderChange)
+    self.sliderzrot:setValues(0.0, 360.0, 1, 1.0)
+    self.sliderzrot:setCurrentValue(1.0, true)
+    self.sliderzrot.internal = "zrot";
+    self.sliderzrot.txtbox = self.txtboxzrot;
+    self:addChild(self.sliderzrot);
+
+    self.ignoreSliderValueChange = false
+
+    self.closeBtn = ISButton:new(5, 0, 75, btnheight, getText("IGUI_CraftUI_Close"), self, ISExtendedPlacementUI.clickedButton);
+    self.closeBtn.internal = "CLOSE";
+    self.closeBtn:initialise();
+    self.closeBtn:instantiate();
+    self.closeBtn.borderColor = {r=1, g=1, b=1, a=0.1};
+    self:addChild(self.closeBtn);
+
+    self.revertBtn = ISButton:new(self.closeBtn.x + self.closeBtn:getWidth() + 5, 0, 75, btnheight, getText("IGUI_ExtendedPlacement_Revert"), self, ISExtendedPlacementUI.clickedButton);
+    self.revertBtn.internal = "REVERT";
+    self.revertBtn:initialise();
+    self.revertBtn:instantiate();
+    self.revertBtn.borderColor = {r=1, g=1, b=1, a=0.1};
+    self:addChild(self.revertBtn);
+
+    self:adjust();
+    self:resetSlidersValues();
+end
+
+function ISExtendedPlacementUI:setTxtboxValueFromSliders()
+    if self.sliderxrot.txtbox then
+        self.sliderxrot.txtbox:setText(self.sliderxrot:getCurrentValue() .. "");
+    end
+    if self.slideryrot.txtbox then
+        self.slideryrot.txtbox:setText(self.slideryrot:getCurrentValue() .. "");
+    end
+    if self.sliderzrot.txtbox then
+        self.sliderzrot.txtbox:setText(self.sliderzrot:getCurrentValue() .. "");
+    end
+    if self.sliderxmov.txtbox then
+        self.sliderxmov.txtbox:setText(self.sliderxmov:getCurrentValue() .. "");
+    end
+    if self.sliderymov.txtbox then
+        self.sliderymov.txtbox:setText(self.sliderymov:getCurrentValue() .. "");
+    end
+    if self.sliderzmov.txtbox then
+        self.sliderzmov.txtbox:setText(self.sliderzmov:getCurrentValue() .. "");
+    end
+end
+
+function ISExtendedPlacementUI:resetSlidersValues()
+    self.sliderxrot:setCurrentValue(self.item:getWorldXRotation(), true)
+    self.slideryrot:setCurrentValue(self.item:getWorldYRotation(), true)
+    self.sliderzrot:setCurrentValue(self.item:getWorldZRotation(), true)
+    self.sliderxmov:setCurrentValue(self.worlditem:getOffX(), true)
+    self.sliderymov:setCurrentValue(self.worlditem:getOffY(), true)
+    self.sliderzmov:setCurrentValue(self.worlditem:getOffZ(), true)
+
+    self:setTxtboxValueFromSliders();
+end
+
+function ISExtendedPlacementUI:onAxisSliderChange(value, slider)
+    if slider.txtbox then
+        slider.txtbox:setText(value .. "")
+    end
+
+    if slider.internal == "xrot" then
+        self.item:setWorldXRotation(value);
+    end
+    if slider.internal == "xmov" then
+        self.worlditem:setOffX(value);
+    end
+    if slider.internal == "yrot" then
+        self.item:setWorldYRotation(value);
+    end
+    if slider.internal == "ymov" then
+        self.worlditem:setOffY(value);
+    end
+    if slider.internal == "zrot" then
+        self.item:setWorldZRotation(value);
+    end
+    if slider.internal == "zmov" then
+        self.worlditem:setOffZ(value);
+    end
+
+    if not self.ignoreSliderValueChange then
+        self.worlditem:setExtendedPlacement(true)
+        if slider.internal == "xrot" or slider.internal == "yrot" or slider.internal == "zrot" then
+            self.gizmo = "rotate"
+        else
+            self.gizmo = "translate"
+        end
+    end
+end
+
+function ISExtendedPlacementUI:onAxisTextChange(box)
+    -- if we're typing, we don't do anything if it ends with a ".", to avoid resetting the value if you're typing 0.2 for ex.
+    if luautils.stringEnds(box:getInternalText(), ".") then
+        return;
+    end
+    local newVal = tonumber(box:getInternalText());
+    if not newVal then
+        newVal = 0;
+    end
+    if box.internal == "xrot" or box.internal == "yrot" or box.internal == "zrot" then
+        if newVal > 360 then
+            newVal = 360;
+        end
+        if newVal < 0 then
+            newVal = 0;
+        end
+        newVal = math.floor(newVal);
+    else
+        if newVal > 1 then
+            newVal = 1;
+        end
+        if newVal < 0 then
+            newVal = 0;
+        end
+    end
+    newVal = luautils.round(newVal, 3)
+
+    if box.internal == "xrot" then
+        self.item:setWorldXRotation(newVal);
+    end
+    if box.internal == "xmov" then
+        self.worlditem:setOffX(newVal);
+    end
+    if box.internal == "yrot" then
+        self.item:setWorldYRotation(newVal);
+    end
+    if box.internal == "ymov" then
+        self.worlditem:setOffY(newVal);
+    end
+    if box.internal == "zrot" then
+        self.item:setWorldZRotation(newVal);
+    end
+    if box.internal == "zmov" then
+        self.worlditem:setOffZ(newVal);
+    end
+
+    self:resetSlidersValues();
+end
+
+function ISExtendedPlacementUI:setupAxisTextBox(txtBox)
+    txtBox:initialise();
+    txtBox:instantiate();
+    txtBox:setOnlyNumbers(true);
+    txtBox.onTextChangeFunction = ISExtendedPlacementUI.onAxisTextChange;
+    txtBox.target = self;
+    self:addChild(txtBox);
+end
+
+function ISExtendedPlacementUI:setupButton(button)
+    button.repeatWhilePressedFunc = ISExtendedPlacementUI.onMouseDownBtn;
+    button.repeatWhilePressedTimer = 10;
+    button:initialise();
+    button:instantiate();
+    button.borderColor = {r=1, g=1, b=1, a=0.1};
+    self:addChild(button);
+end
+
+function ISExtendedPlacementUI:revert()
+    self.item:setWorldXRotation(self.originalRotX);
+    self.item:setWorldYRotation(self.originalRotY);
+    self.item:setWorldZRotation(self.originalRotZ);
+
+    self.worlditem:setOffX(self.originalMovX);
+    self.worlditem:setOffY(self.originalMovY);
+    self.worlditem:setOffZ(self.originalMovZ);
+
+    self:resetSlidersValues();
+end
+
+function ISExtendedPlacementUI:clickedButton(button)
+    if button.internal == "CLOSE" then
+        self:close();
+    end
+    if button.internal == "REVERT" then
+        self:revert();
+    end
+end
+
+-- re-adjust size and placement of label, buttons etc.
+function ISExtendedPlacementUI:adjust()
+
+    -- place buttons near labels, check the biggest one so all are aligned
+    local biggestWidth = getTextManager():MeasureStringX(self.font, self.labelxmov.name);
+    local biggestWidthAxis = biggestWidth;
+    if getTextManager():MeasureStringX(self.font, self.labelymov.name) > biggestWidth then
+        biggestWidth = getTextManager():MeasureStringX(self.font, self.labelymov.name);
+        biggestWidthAxis = biggestWidth;
+    end
+    if getTextManager():MeasureStringX(self.font, self.labelzmov.name) > biggestWidth then
+        biggestWidth = getTextManager():MeasureStringX(self.font, self.labelaxisz.name);
+        biggestWidthAxis = biggestWidth;
+    end
+    --if getTextManager():MeasureStringX(self.font, self.labelmode.name) > biggestWidth then
+    --    biggestWidth = getTextManager():MeasureStringX(self.font, self.labelmode.name);
+    --end
+
+    self.labelmov:setY(self:titleBarHeight() + 5)
+    self.labelxmov:setY(self.labelmov.y + self.labelmov:getHeight() + 5);
+    self.labelymov:setY(self.labelxmov.y + self.labelxmov:getHeight() + 5);
+    self.labelzmov:setY(self.labelymov.y + self.labelymov:getHeight() + 5);
+    self.txtboxxmov:setY(self.labelxmov.y);
+    self.txtboxymov:setY(self.labelymov.y);
+    self.txtboxzmov:setY(self.labelzmov.y);
+
+    self.labelrot:setY(self.txtboxzmov.y + self.txtboxzmov:getHeight() + 20)
+    self.labelxrot:setY(self.labelrot.y + self.labelrot:getHeight() + 5);
+    self.labelyrot:setY(self.labelxrot.y + self.labelxrot:getHeight() + 5);
+    self.labelzrot:setY(self.labelyrot.y + self.labelyrot:getHeight() + 5);
+    self.txtboxxrot:setY(self.labelxrot.y);
+    self.txtboxyrot:setY(self.labelyrot.y);
+    self.txtboxzrot:setY(self.labelzrot.y);
+
+
+    local offset = 10;
+    self.txtboxxrot:setX(biggestWidthAxis + offset)
+    self.txtboxyrot:setX(biggestWidthAxis + offset)
+    self.txtboxzrot:setX(biggestWidthAxis + offset)
+
+    self.txtboxxmov:setX(biggestWidthAxis + offset)
+    self.txtboxymov:setX(biggestWidthAxis + offset)
+    self.txtboxzmov:setX(biggestWidthAxis + offset)
+
+    -- recheck the biggest width with the txt boxes
+    if self.txtboxxrot.x + self.txtboxxrot:getWidth() > biggestWidth then
+        biggestWidth = self.txtboxxrot.x + self.txtboxxrot:getWidth();
+    end
+    if self.txtboxyrot.x + self.txtboxyrot:getWidth() > biggestWidth then
+        biggestWidth = self.txtboxyrot.x + self.txtboxyrot:getWidth();
+    end
+    if self.txtboxzrot.x + self.txtboxzrot:getWidth() > biggestWidth then
+        biggestWidth = self.txtboxzrot.x + self.txtboxzrot:getWidth();
+    end
+
+    -- axis sliders
+    offset = 15;
+    self.sliderxrot:setX(biggestWidth + offset);
+    self.sliderxrot:setY(self.txtboxxrot.y);
+
+    self.slideryrot:setX(biggestWidth + offset);
+    self.slideryrot:setY(self.txtboxyrot.y);
+
+    self.sliderzrot:setX(biggestWidth + offset);
+    self.sliderzrot:setY(self.txtboxzrot.y);
+
+    self.sliderxmov:setX(biggestWidth + offset);
+    self.sliderxmov:setY(self.txtboxxmov.y);
+
+    self.sliderymov:setX(biggestWidth + offset);
+    self.sliderymov:setY(self.txtboxymov.y);
+
+    self.sliderzmov:setX(biggestWidth + offset);
+    self.sliderzmov:setY(self.txtboxzmov.y);
+
+    -- move the close & revert button
+    self.closeBtn:setY(self.sliderzrot.y + self.sliderzrot:getHeight() + 30)
+    self.revertBtn:setY(self.sliderzrot.y + self.sliderzrot:getHeight() + 30)
+
+    self:setHeight(self.closeBtn.y + self.closeBtn:getHeight() + 5);
+    self:setWidth(self.sliderzmov:getX() + self.sliderzmov:getWidth() + 10);
+
+end
+
+function ISExtendedPlacementUI:prerender()
+    ISCollapsableWindow.prerender(self);
+
+    local worlditem = self.worlditem;
+    if self:isReallyVisible() and worlditem and worlditem:getItem() and worlditem:isExistInTheWorld() then
+        worlditem:getItem():setDoingExtendedPlacement(true)
+        local gizmo = (self.gizmo == "translate") and Gizmos.getInstance():getTranslateGizmo(self.playerNum) or Gizmos.getInstance():getRotateGizmo(self.playerNum)
+        gizmo:setWorldPosition(worlditem:getWorldPosX(), worlditem:getWorldPosY(), worlditem:getWorldPosZ())
+        local item = worlditem:getItem()
+        gizmo:setRotation(item:getWorldXRotation(), item:getWorldYRotation(), item:getWorldZRotation())
+        gizmo:setVisible(true)
+        gizmo:setTable(self)
+        Gizmos.getInstance():setGizmo(self.playerNum, gizmo)
+    end
+
+    --self:drawRect(0, 0, self.width, self.height, self.backgroundColor.a, self.backgroundColor.r, self.backgroundColor.g, self.backgroundColor.b);
+    --self:drawRectBorder(0, 0, self.width, self.height, self.borderColor.a, self.borderColor.r, self.borderColor.g, self.borderColor.b);
+end
+
+function ISExtendedPlacementUI:createChildren()
+    ISCollapsableWindow.createChildren(self)
+end
+
+function ISExtendedPlacementUI:update()
+    ISCollapsableWindow.update(self)
+
+    if not self.worlditem or not self.worlditem:isExistInTheWorld() then
+        self:close();
+        return
+    end
+
+    if self.worlditem and self.character:getCurrentSquare() and self.character:getCurrentSquare():DistToProper(self.worlditem:getSquare()) > 3 then
+        self:close();
+        return
+    end
+
+    if not isMouseButtonDown(0) and self:isMouseOver() then
+        if self:getMouseY() >= self.sliderxrot.y and self:getMouseY() < self.sliderzrot:getBottom() then
+            self.gizmo = "rotate"
+        end
+        if self:getMouseY() >= self.sliderxmov.y and self:getMouseY() < self.sliderzmov:getBottom() then
+            self.gizmo = "translate"
+        end
+    end
+    --self:adjust();
+end
+
+function ISExtendedPlacementUI:onJoypadDown(button)
+    if button == Joypad.BButton then
+        self:removeFromUIManager()
+        setJoypadFocus(self.playerNum, nil)
+    end
+end
+
+function ISExtendedPlacementUI:setObject(item)
+
+end
+
+function ISExtendedPlacementUI:onGainJoypadFocus(joypadData)
+    self.drawJoypadFocus = true
+end
+
+function ISExtendedPlacementUI:onRotateGizmo(vector3f)
+    if not self.worlditem or not self.worlditem:isExistInTheWorld() then
+        return
+    end
+    local item = self.worlditem:getItem()
+    local rx = vector3f:x() + (vector3f:x() < 0 and 360 or 0)
+    local ry = vector3f:y() + (vector3f:y() < 0 and 360 or 0)
+    local rz = vector3f:z() + (vector3f:z() < 0 and 360 or 0)
+    item:setWorldXRotation(rx)
+    item:setWorldYRotation(ry)
+    item:setWorldZRotation(rz)
+    self:resetSlidersValues()
+end
+
+function ISExtendedPlacementUI:onTranslateGizmo(vector3f)
+    if not self.worlditem or not self.worlditem:isExistInTheWorld() then
+        return
+    end
+    local worlditem = self.worlditem
+    worlditem:setOffX(PZMath.clamp_01(vector3f:x() - worlditem:getX()))
+    worlditem:setOffY(PZMath.clamp_01(vector3f:y() - worlditem:getY()))
+    worlditem:setOffZ(PZMath.clamp_01(vector3f:z() - worlditem:getZ()))
+    self:resetSlidersValues()
+end
+
+function ISExtendedPlacementUI:close()
+    if self.worlditem and self.worlditem:getItem() then
+        self.worlditem:getItem():setDoingExtendedPlacement(false)
+        self.worlditem:syncExtendedPlacement()
+    end
+    Gizmos.getInstance():setGizmo(self.playerNum, null)
+    self:setVisible(false)
+    self:removeFromUIManager()
+end
+
+function ISExtendedPlacementUI:new(x, y, character, item)
+    local width = 620
+    local height = 650
+    if not x then
+        x = getCore():getScreenWidth() / 2 - width / 2;
+    end
+    if not y then
+        y = getCore():getScreenHeight() / 2 - height / 2;
+    end
+    local o = ISCollapsableWindow.new(self, x, y, width, height)
+    o.title = item:getItem():getDisplayName();
+    o.character = getSpecificPlayer(character)
+    o.playerNum = character;
+    o.worlditem = item
+    o.item = item:getItem();
+    o.font = UIFont.NewMedium;
+    o.fontsmall = UIFont.NewSmall;
+    o.pressedTime = 0;
+    o.pressedMaxTime = 5;
+    o.wasPressing = false;
+    o.originalRotX = luautils.round(o.item:getWorldXRotation(), 3);
+    o.originalRotY = luautils.round(o.item:getWorldYRotation(), 3);
+    o.originalRotZ = luautils.round(o.item:getWorldZRotation(), 3);
+    o.originalMovX = luautils.round(o.worlditem:getOffX(), 3);
+    o.originalMovY = luautils.round(o.worlditem:getOffY(), 3);
+    o.originalMovZ = luautils.round(o.worlditem:getOffZ(), 3);
+    o.gizmo = "translate"
+    o:setWantKeyEvents(true)
+    o:setResizable(false)
+    ISExtendedPlacementUI.windows[o.playerNum] = o
+    return o
+end
+
+function ISExtendedPlacementUI:isKeyConsumed(key)
+    return self.playerNum == 0 and key == Keyboard.KEY_ESCAPE
+end
+
+function ISExtendedPlacementUI:onKeyRelease(key)
+    if self.playerNum == 0 and key == Keyboard.KEY_ESCAPE then
+        self:close()
+        self:removeFromUIManager();
+        return
+    end
+end
+
+function ISExtendedPlacementUI.GetWindowForPlayer(playerIndex)
+    return ISExtendedPlacementUI.windows[playerIndex]
+end
